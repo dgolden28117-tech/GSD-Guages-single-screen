@@ -923,12 +923,12 @@ function idleReset(){clearTimeout(idle);if(opened)idle=setTimeout(close,30000)}
 function warn(side){const w=GSDTouch.getWarnings(side);return `<div class="gsd-touch-title">${safe(side.toUpperCase())}: ${safe(w.pid)}</div>`+w.values.map((v,i)=>input(`${safe(w.names[i])} ${safe(w.unit)}`,`warn:${side}:${i}`,v,'range',w.min,w.max,w.step)).join('')}
 const palette=['#000000','#ffffff','#700000','#ff0000','#ff4500','#ff8800','#ffcc00','#ffff00','#9acd32','#00ff00','#00b050','#00ff7f','#00ffff','#00bfff','#0088ff','#0000ff','#4444ff','#6600ff','#8000ff','#a020f0','#b85aff','#d000ff','#ff00ff','#ff1493','#ff69b4','#ffb6c1','#964b00','#b87333','#c0c0c0','#808080','#4b5563','#1f2937'];
 function view(next){page=next;tint();const v=GSDTouch.get();let body='';
-if(page==='home')body=`<div class="gsd-touch-grid">${btn('◉ GAUGES','gauges')}${btn('◈ DISPLAY','display')}${btn('⚙ SYSTEM','system')}</div><div class="gsd-touch-muted">Swipe left for this menu, swipe right for diagnostics, or tap the gauge to cycle backgrounds.</div>`;
+if(page==='home')body=`<div class="gsd-touch-grid">${btn('◉ GAUGES','gauges')}${btn('◈ DISPLAY','display')}${btn('⚙ SYSTEM','system')}${btn('DIAGNOSTICS','diagnostics')}</div>`;
 if(page==='gauges')body=`${select('GAUGE LAYOUT','split',['SINGLE','SPLIT'],v.split?'SPLIT':'SINGLE')}${!v.split?select('GAUGE PID','pid',GSDTouch.pids,v.label):select('LEFT PID','left',GSDTouch.pids,v.left)+select('RIGHT PID','right',GSDTouch.pids,v.right)}<div class="gsd-touch-actions">${btn('WARNING LIMITS','warnings')}${btn('RESTORE GAUGES','restore-gauges')}</div>`;
 if(page==='warnings')body=(v.split?warn('left')+warn('right'):warn('full'))+'<div class="gsd-touch-muted">Warning zones are independent for each selected PID. Changes apply to the live gauge preview.</div>';
 if(page==='display')body=`${select('BACKGROUND STYLE','style',['PURE BLACK','HEX','GLOW','HEX GLOW'],({'black':'PURE BLACK','honeycomb':'HEX','glow':'GLOW','hexglow':'HEX GLOW'})[v.style])}${input('SWEEP COLOR','sweep',v.sweep)}${input('TEXT COLOR','text',v.text)}${input('BACKGROUND COLOR','background',v.background)}${input('BRIGHTNESS','brightness',v.brightness,'range')}<div class="gsd-touch-actions">${btn('32-COLOR PALETTE','palette')}${btn('BOOT ANIMATION','boot')}</div>`;
 if(page==='palette')body=`<div class="gsd-touch-muted">Select a target color, then tap one of the 32 presets.</div>${select('COLOR TARGET','target',['BACKGROUND','SWEEP','TEXT'],localStorage.getItem('gsd-touch-target')||'BACKGROUND')}<div class="gsd-touch-colors">${palette.map(c=>`<button data-color="${c}" style="background:${c}" aria-label="${c}" title="${c}"></button>`).join('')}</div>`;
-if(page==='system')body=`<div class="gsd-touch-dtc">MODE: DEMO / NO LIVE OBD CONNECTION<br>ADAPTER: VEEPEAK VP-01 (NOT CONNECTED)</div>${select('AMBIENT SYNC','sync',['MANUAL','AUTO (PENDING)'],v.sync?'AUTO (PENDING)':'MANUAL')}<div class="gsd-touch-muted">Factory ambient color sync requires VW signal discovery. Automatic vehicle data and adapter connection require ESP32 firmware.</div><div class="gsd-touch-actions">${btn('EXPORT SETTINGS','export')}${btn('RESET SETTINGS','reset-confirm')}</div>`;
+if(page==='system')body=`<div class="gsd-touch-dtc">MODE: DEMO / NO LIVE OBD CONNECTION<br>ADAPTER: VEEPEAK VP-01 (NOT CONNECTED)</div>${select('AMBIENT SYNC','sync',['MANUAL','AUTO (PENDING)'],v.sync?'AUTO (PENDING)':'MANUAL')}<div class="gsd-touch-muted">Factory ambient color sync requires VW signal discovery. Automatic vehicle data and adapter connection require ESP32 firmware.</div><div class="gsd-touch-actions">${btn('DIAGNOSTICS','diagnostics')}${btn('EXPORT SETTINGS','export')}${btn('RESET SETTINGS','reset-confirm')}</div>`;
 if(page==='diagnostics')body=`<div class="gsd-touch-dtc">OBD STATUS: DISCONNECTED<br>NO VEHICLE TROUBLE CODES READ</div><div class="gsd-touch-actions">${btn('SCAN CODES','scan')}${btn('CLEAR CODES','clear')}</div><div class="gsd-touch-muted">Preview only. Reading and clearing DTCs requires tested ESP32 / VP-01 communication. No vehicle commands are sent from this HTML preview.</div>`;
 if(page==='scan')body='<div class="gsd-touch-dtc">SCAN UNAVAILABLE — OBD NOT CONNECTED</div><div class="gsd-touch-muted">No trouble codes have been read. No vehicle commands were sent.</div>';
 if(page==='clear')body='<div class="gsd-touch-dtc">CLEAR DISABLED — OBD NOT CONNECTED</div><div class="gsd-touch-muted">No trouble codes were erased. The connected version will require explicit confirmation.</div>';
@@ -953,9 +953,9 @@ screen.addEventListener('pointerup',e=>{
  if(!gesture||gesture.id!==e.pointerId)return;
  const g=gesture;gesture=null;if(opened)return;
  const dx=e.clientX-g.x,dy=e.clientY-g.y,elapsed=performance.now()-g.time;
- if(Math.abs(dx)>38&&Math.abs(dx)>Math.abs(dy)*1.3){
+ if(Math.max(Math.abs(dx),Math.abs(dy))>38){
    suppressClickUntil=performance.now()+500;
-   show(dx<0?'home':'diagnostics');e.preventDefault();e.stopPropagation();
+   if(Math.abs(dy)>Math.abs(dx)*1.3)show(dy<0?'gauges':'display');else show(dx>0?'system':'diagnostics');e.preventDefault();e.stopPropagation();
  }else if(Math.abs(dx)<15&&Math.abs(dy)<15&&elapsed<650){
    suppressClickUntil=performance.now()+500;
    cycleBackground();e.preventDefault();e.stopPropagation();
@@ -975,8 +975,18 @@ layer.addEventListener('pointerup',e=>{
  if(!menuGesture||menuGesture.id!==e.pointerId)return;
  const g=menuGesture;menuGesture=null;
  const dx=e.clientX-g.x,dy=e.clientY-g.y;
- if(Math.abs(dx)<38||Math.abs(dx)<Math.abs(dy)*1.3)return;
- if(['diagnostics','scan','clear'].includes(g.page)?dx<0:dx>0){
+ const vertical=Math.abs(dy)>Math.abs(dx)*1.3;
+ const horizontal=Math.abs(dx)>Math.abs(dy)*1.3;
+ const returnToGauge = ['diagnostics','scan','clear'].includes(g.page)
+   ? horizontal&&dx>38
+   : ['system','reset-confirm','export'].includes(g.page)
+   ? horizontal&&dx< -38
+   : ['gauges','warnings','features'].includes(g.page)
+   ? vertical&&dy>38
+   : ['display','colors'].includes(g.page)
+   ? vertical&&dy< -38
+   : (horizontal&&Math.abs(dx)>38)||(vertical&&Math.abs(dy)>38);
+ if(returnToGauge){
   close();e.preventDefault();e.stopPropagation();
  }
 },true);
