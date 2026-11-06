@@ -698,26 +698,39 @@ function singleStartup(ctx,elapsed){
   }
   ctx.restore();return;
  }
- // The triple-gauge demo sweep starts at 11.8s and finishes at 14.8s.
+ // Same circular demo sweep and warning-free color as the approved triple gauge.
  const q=clamp01((t-logoFadeEnd)/3);
  const sweep=q<.5?smooth(q*2):smooth((1-q)*2);
- const base='#b450ff';
- ctx.save();ctx.strokeStyle='#30283c';ctx.lineWidth=2;ctx.strokeRect(7,7,306,226);
- ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';
- ctx.font="15px 'GSD Sutro',sans-serif";ctx.fillText('BOOST PRESSURE',160,45,295);
- ctx.shadowColor=base;ctx.shadowBlur=10;
- ctx.font="bold 79px 'GSD Sutro',sans-serif";ctx.fillText((30*sweep).toFixed(1),160,121,285);
- ctx.shadowBlur=0;ctx.font="17px 'GSD Sutro',sans-serif";ctx.fillText('PSI',160,174);
- ctx.fillStyle='#1c1427';ctx.fillRect(27,203,266,9);
- ctx.fillStyle=base;ctx.shadowColor=base;ctx.shadowBlur=12;
- ctx.fillRect(27,203,Math.max(2,266*sweep),9);ctx.shadowBlur=0;
- ctx.font="11px 'GSD Sutro',sans-serif";ctx.textAlign='left';ctx.fillStyle='#fff';ctx.fillText('0',27,222);
- ctx.textAlign='right';ctx.fillText('30',293,222);
- const faceOpacity=ease(11.8,12.25);
- if(faceOpacity<1){ctx.globalAlpha=1-faceOpacity;ctx.fillStyle='#000';ctx.fillRect(0,0,320,240)}
- ctx.restore();
+ const demo={...data(),boost:30*sweep,afr:11+7*sweep,iat:200*sweep,egt:1320*sweep};
+ const oldColors=state.colors,oldGreen=state.boostGreen,oldYellow=state.boostYellow,oldRed=state.boostRed,oldLow=state.afrLow,oldHigh=state.afrHigh,oldIat=state.iatWarn,oldEgt=state.egtWarn;
+ ctx.save();ctx.translate(40,0);ctx.scale(.8,.8);
+ try{
+  state.colors=['#b450ff','#b450ff','#b450ff'];state.boostGreen=30;state.boostYellow=30;state.boostRed=30;state.afrLow=10;state.afrHigh=19;state.iatWarn=250;state.egtWarn=1650;
+  gauge(ctx,0,demo,performance.now(),true);
+  const faceOpacity=ease(11.8,12.25);
+  if(faceOpacity<1){ctx.globalAlpha=1-faceOpacity;ctx.fillStyle='#000';ctx.beginPath();ctx.arc(150,150,122,0,Math.PI*2);ctx.fill();}
+ }finally{state.colors=oldColors;state.boostGreen=oldGreen;state.boostYellow=oldYellow;state.boostRed=oldRed;state.afrLow=oldLow;state.afrHigh=oldHigh;state.iatWarn=oldIat;state.egtWarn=oldEgt;ctx.restore();}
 }
-function frame(now){if(engine.auto){const t=(now-t0)/1000;engine.rpm=Math.round(900+(Math.sin(t*.65)+1)*2700);engine.throttle=Math.round(clamp((Math.sin(t*.65-.5)+1)*50,0,100));engine.load=Math.round(12+engine.throttle*.83);}const v=data();const c=document.querySelector('#gauges .gauge:first-child canvas');if(c){if(c.width!==320)c.width=320;if(c.height!==240)c.height=240;const ctx=c.getContext('2d');const elapsed=now-startupAt;ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,320,240);ctx.fillStyle='#000';ctx.fillRect(0,0,320,240);ctx.save();ctx.translate(40,0);ctx.scale(.8,.8);if(elapsed>=0&&elapsed<startupDuration)startupGauge(ctx,0,elapsed,v,now);else gauge(ctx,0,v,now);ctx.restore()}requestAnimationFrame(frame)}render();requestAnimationFrame(frame);
+function frame(now){
+ if(engine.auto){const t=(now-t0)/1000;engine.rpm=Math.round(900+(Math.sin(t*.65)+1)*2700);engine.throttle=Math.round(clamp((Math.sin(t*.65-.5)+1)*50,0,100));engine.load=Math.round(12+engine.throttle*.83);}
+ const v=data(),c=document.querySelector('#gauges .gauge:first-child canvas');
+ if(c){
+  if(c.width!==320)c.width=320;if(c.height!==240)c.height=240;
+  const ctx=c.getContext('2d');ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,320,240);
+  ctx.fillStyle='#000';ctx.fillRect(0,0,320,240);
+  const elapsed=now-startupAt;
+  if(elapsed>=0&&elapsed<startupDuration){
+   // The marquee and logo use the ENTIRE 320x240 rectangular display.
+   singleStartup(ctx,elapsed);
+  }else{
+   // Keep the original 300x300 circular gauge uniformly scaled to 240x240,
+   // centered in the landscape display: never stretch its X or Y axes.
+   ctx.save();ctx.translate(40,0);ctx.scale(.8,.8);gauge(ctx,0,v,now);ctx.restore();
+  }
+ }
+ requestAnimationFrame(frame);
+}
+render();requestAnimationFrame(frame);
 })();
 </script><script id="gsd-dashboard-accent-v1">
 (()=>{
