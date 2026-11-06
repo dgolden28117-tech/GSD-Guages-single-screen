@@ -717,7 +717,7 @@ function singleStartup(ctx,elapsed){
  if(faceOpacity<1){ctx.globalAlpha=1-faceOpacity;ctx.fillStyle='#000';ctx.fillRect(0,0,320,240)}
  ctx.restore();
 }
-function frame(now){if(engine.auto){const t=(now-t0)/1000;engine.rpm=Math.round(900+(Math.sin(t*.65)+1)*2700);engine.throttle=Math.round(clamp((Math.sin(t*.65-.5)+1)*50,0,100));engine.load=Math.round(12+engine.throttle*.83);}const v=data();const c=document.querySelector('#gauges .gauge:first-child canvas');if(c){if(c.width!==320)c.width=320;if(c.height!==240)c.height=240;const ctx=c.getContext('2d');const elapsed=now-startupAt;if(elapsed>=0&&elapsed<startupDuration)singleStartup(ctx,elapsed);else if(state.splitEnabled&&state.splitEnabled[0])singleSplitGauge(ctx,v,now);else singleGauge(ctx,v,now)}requestAnimationFrame(frame)}render();requestAnimationFrame(frame);
+function frame(now){if(engine.auto){const t=(now-t0)/1000;engine.rpm=Math.round(900+(Math.sin(t*.65)+1)*2700);engine.throttle=Math.round(clamp((Math.sin(t*.65-.5)+1)*50,0,100));engine.load=Math.round(12+engine.throttle*.83);}const v=data();const c=document.querySelector('#gauges .gauge:first-child canvas');if(c){if(c.width!==320)c.width=320;if(c.height!==240)c.height=240;const ctx=c.getContext('2d');const elapsed=now-startupAt;ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,320,240);ctx.fillStyle='#000';ctx.fillRect(0,0,320,240);ctx.save();ctx.translate(40,0);ctx.scale(.8,.8);if(elapsed>=0&&elapsed<startupDuration)startupGauge(ctx,0,elapsed,v,now);else gauge(ctx,0,v,now);ctx.restore()}requestAnimationFrame(frame)}render();requestAnimationFrame(frame);
 })();
 </script><script id="gsd-dashboard-accent-v1">
 (()=>{
