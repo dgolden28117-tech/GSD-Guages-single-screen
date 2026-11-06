@@ -536,12 +536,119 @@ all('[data-tab]').forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;save();rende
 
 // Full-screen rectangular display renderer. Runs inside the approved UI's existing state and simulation loop.
 function singleValue(label,v){switch(label){case 'Boost Pressure':return [v.boost,-10,30,'PSI'];case 'Air/Fuel Ratio':return [v.afr,10,20,'AFR'];case 'Intake Air Temperature':return [v.iat,50,180,'°F'];case 'Exhaust Gas Temperature':return [v.egt,300,1650,'°F'];case 'Engine RPM':return [v.rpm,0,7000,'RPM'];case 'Coolant Temperature':return [v.coolant,100,260,'°F'];case 'Oil Temperature':return [v.oil,100,300,'°F'];case 'Engine Load':return [v.load,0,100,'%'];case 'Battery Voltage':return [13.9+Math.sin(performance.now()/2200)*.15,10,16,'V'];case 'Vehicle Speed':return [Math.max(0,(v.rpm-850)/85),0,160,'MPH'];case 'Ambient Air Temperature':return [72,0,120,'°F'];case 'Oil Pressure':return [Math.max(12,v.rpm/65),0,100,'PSI'];case 'Fuel Level':return [72,0,100,'%'];case 'Fuel Economy':return [28,0,60,'MPG'];case 'Fuel Rail Pressure':return [1800,0,3000,'PSI'];case 'Transmission Temperature':return [185,100,280,'°F'];case 'Lambda':return [v.afr/14.7,.7,1.3,'λ'];default:return [v.boost,-10,30,''];}}
-function singleBackground(ctx,color,style){ctx.fillStyle='#000';ctx.fillRect(0,0,320,240);if(style==='black'||style==='pure-black'||style==='pureblack')return;
- if(style==='glow'||style==='bottom-glow'||style==='bottomGlow'||style==='hexglow'||style==='hex-glow'||style==='honeycomb'){
- const grad=ctx.createLinearGradient(0,240,0,15);grad.addColorStop(0,color+'b8');grad.addColorStop(.45,color+'35');grad.addColorStop(1,'#00000000');ctx.fillStyle=grad;ctx.fillRect(0,0,320,240)}
- if(style==='honeycomb'||style==='hex'||style==='hexglow'||style==='hex-glow'){
- ctx.save();ctx.lineWidth=1.2;ctx.strokeStyle=color;for(let row=-1;row<12;row++)for(let col=-1;col<13;col++){
- let x=col*30+(row%2)*15,y=row*22;ctx.globalAlpha=.12+.23*y/240;ctx.beginPath();for(let k=0;k<6;k++){let a=Math.PI/3*k;let px=x+16*Math.cos(a),py=y+12*Math.sin(a);if(k===0)ctx.moveTo(px,py);else ctx.lineTo(px,py)}ctx.closePath();ctx.stroke()}ctx.restore()}}
+function singleBackground(ctx,color,style){
+ ctx.save();ctx.fillStyle='#000';ctx.fillRect(0,0,320,240);
+ if(style==='black'||style==='pure-black'||style==='pureblack'){ctx.restore();return;}
+ // Use the original three-gauge background painter, mapped from its 260x260 face to 320x240.
+ // The full rectangle is visible; there is no circular clipping mask.
+ ctx.beginPath();ctx.rect(0,0,320,240);ctx.clip();
+ ctx.scale(320/260,240/260);ctx.translate(-20,-20);
+ const faceStyle=(style==='hex'||style==='honeycomb')?'honeycomb':(style==='hex-glow'?'hexglow':style);
+ const hexColor=color;const C=150;
+ ctx.globalAlpha=(state.brightness==null?100:state.brightness)/100;
+if(faceStyle==='glow'||faceStyle==='hexglow'){
+ const grad=ctx.createRadialGradient(150,265,0,150,265,205);
+ const gr=parseInt(hexColor.slice(1,3),16),gn=parseInt(hexColor.slice(3,5),16),bl=parseInt(hexColor.slice(5,7),16);
+ const glowRGB=`${gr},${gn},${bl}`;
+ grad.addColorStop(0,`rgba(${glowRGB},1)`);
+ grad.addColorStop(.23,`rgba(${glowRGB},.88)`);
+ grad.addColorStop(.48,`rgba(${glowRGB},.45)`);
+ grad.addColorStop(.75,`rgba(${glowRGB},.09)`);
+ grad.addColorStop(1,`rgba(${glowRGB},0)`);
+ ctx.save();ctx.translate(150,265);ctx.scale(1,.75);ctx.translate(-150,-265);
+ ctx.fillStyle=grad;ctx.fillRect(-50,-50,400,500);ctx.restore();
+}
+if(faceStyle==='honeycomb'||faceStyle==='hexglow'){
+ const intensity=.60;
+ const rr=parseInt(hexColor.slice(1,3),16),gg=parseInt(hexColor.slice(3,5),16),bb=parseInt(hexColor.slice(5,7),16);
+ // Width/height=1.50: hexagons are exactly 50% wider than tall. Preserve original glow and heavy shadow.
+ const W=30,H=20,dx=W*.75,dy=H;
+ ctx.save();ctx.lineJoin='round';
+ for(let col=-2;col<16;col++)for(let row=-2;row<19;row++){
+  const x=col*dx+8,y=row*dy+(Math.abs(col)%2)*dy/2+5;
+  ctx.beginPath();ctx.moveTo(x-W/4,y-H/2);ctx.lineTo(x+W/4,y-H/2);
+  ctx.lineTo(x+W/2,y);ctx.lineTo(x+W/4,y+H/2);
+  ctx.lineTo(x-W/4,y+H/2);ctx.lineTo(x-W/2,y);ctx.closePath();
+  // The GLOW is already painted below this honeycomb. Raise the hex lattice
+  // above it using a dark extrusion, while keeping the complete six-sided shape.
+  ctx.save();
+  ctx.translate(1.7,3.2);
+  ctx.strokeStyle='rgba(0,0,0,.96)';
+  ctx.lineWidth=3.8;
+  ctx.shadowColor='rgba(0,0,0,.85)';
+  ctx.shadowBlur=4;
+  ctx.stroke();
+  ctx.restore();
+  // Subtle light on the upper rim reinforces the raised profile.
+  ctx.save();
+  ctx.translate(-.45,-.65);
+  ctx.strokeStyle=`rgba(${rr},${gg},${bb},.34)`;
+  ctx.lineWidth=2.0;
+  ctx.shadowBlur=0;
+  ctx.stroke();
+  ctx.restore();
+  // Original illuminated six-sided outline remains fully visible above the glow.
+  ctx.strokeStyle=`rgba(${rr},${gg},${bb},${(faceStyle==='hexglow' ? (.23+intensity*.52) : (.16+intensity*.46)).toFixed(3)})`;
+  ctx.lineWidth=.85;ctx.shadowColor=hexColor;ctx.shadowBlur=3.6;ctx.stroke();
+ }
+ ctx.restore();
+ const shade=ctx.createRadialGradient(C,C,10,C,C,130);
+ shade.addColorStop(0,'rgba(0,0,0,0)');shade.addColorStop(1,faceStyle==='hexglow'?'rgba(0,0,0,.34)':'rgba(0,0,0,.68)');
+ ctx.fillStyle=shade;ctx.fillRect(20,20,260,260);
+}
+
+ ctx.restore();
+}
+// Landscape split layout: each side owns its PID and warning configuration.
+function singleSplitGauge(ctx,v,now){
+ const base=state.colors[0]||'#a65aff',bg=state.backgrounds[0]||base,style=state.faceStyles[0]||'honeycomb';
+ const fg=state.gaugeTextColor||'#fff';
+ ctx.clearRect(0,0,320,240);singleBackground(ctx,bg,style);
+ ctx.strokeStyle='#30283c';ctx.lineWidth=2;ctx.strokeRect(7,7,306,226);
+ ctx.save();ctx.strokeStyle='rgba(220,205,255,.28)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(160,25);ctx.lineTo(160,217);ctx.stroke();ctx.restore();
+ for(const [side,x] of [['left',0],['right',160]]){
+  const label=state[side==='left'?'splitLeft':'splitRight'][0]||'Boost Pressure';
+  const [value,min,max,unit]=singleValue(label,v);
+  const d=readout(label,v,now);
+  const def=splitWarningDef(label),warn=splitWarning(0,side,label).values;
+  const fraction=clamp((value-min)/(max-min),0,1);
+  const warningColor=(sample)=>{
+   if(def.kind==='afr'){
+    const low=+warn[0],high=+warn[1],deviation=Math.max(low-sample,sample-high);
+    return mixColor(mixColor(base,'#ffbe39',smooth(-.55,.12,deviation)),'#ff354d',smooth(.05,.75,deviation));
+   }
+   const green=+warn[0],yellow=Math.max(green,+warn[1]),red=Math.max(yellow,+warn[2]);
+   return sample<green?base:sample<yellow?'#39e66b':sample<red?'#ffcb32':'#ff2a44';
+  };
+  ctx.save();ctx.beginPath();ctx.rect(x+9,10,142,220);ctx.clip();
+  ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle=fg;
+  const title=label.toUpperCase();ctx.font="12px 'GSD Sutro',sans-serif";ctx.fillText(title,x+80,46,138);
+  const display=(Math.abs(value)<100&&unit!=='RPM'&&unit!=='°F'&&unit!=='MPH'&&unit!=='%')?value.toFixed(1):String(Math.round(value));
+  ctx.font="bold 51px 'GSD Sutro',sans-serif";ctx.shadowColor=warningColor(value);ctx.shadowBlur=9;
+  ctx.fillText(display,x+80,112,145);ctx.shadowBlur=0;
+  ctx.font="14px 'GSD Sutro',sans-serif";ctx.fillText(unit,x+80,159,140);
+  const bx=x+19,by=198,bw=122,bh=9;
+  ctx.fillStyle='#1c1427';ctx.fillRect(bx,by,bw,bh);
+  if(def.kind==='afr'){
+   // The AFR highlight travels along its half sweep, matching the 3-gauge behavior.
+   const afrPos=clamp((value-11)/6,0,1),center=bx+afrPos*bw;
+   for(let k=-12;k<=12;k++){const xx=center+k*2;if(xx<bx||xx>bx+bw)continue;
+    ctx.globalAlpha=Math.pow(1-Math.abs(k)/13,2);ctx.fillStyle=warningColor(value);ctx.fillRect(xx,by,2,bh);
+   }ctx.globalAlpha=1;
+  }else{
+   const segments=80;
+   for(let k=0;k<Math.ceil(fraction*segments);k++){
+    const a=k/segments,b=Math.min((k+1)/segments,fraction),sample=min+(max-min)*(a+b)/2;
+    const red=+warn[2];if(sample>=red&&label==='Boost Pressure'&&Math.sin(now/160)<0)continue;
+    ctx.fillStyle=warningColor(sample);ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=5;
+    ctx.fillRect(bx+a*bw,by,Math.max(1,(b-a)*bw+.3),bh);
+   }ctx.shadowBlur=0;
+  }
+  ctx.font="10px 'GSD Sutro',sans-serif";ctx.fillStyle=fg;ctx.textAlign='left';ctx.fillText(String(def.kind==='boost'?0:min),bx,220);
+  ctx.textAlign='right';ctx.fillText(String(def.kind==='boost'?30:max),bx+bw,220);
+  ctx.restore();
+ }
+}
 function singleGauge(ctx,v,now){const label=state.labels[0]||'Boost Pressure',base=state.colors[0]||'#a65aff',bg=state.backgrounds[0]||base,style=state.faceStyles[0]||'honeycomb';const [val,min,max,unit]=singleValue(label,v),p=clamp((val-min)/(max-min),0,1),fg=state.gaugeTextColor||'#fff';
  ctx.clearRect(0,0,320,240);singleBackground(ctx,bg,style);
  // rectangular instrument bezel and horizontal sweep use full screen width
@@ -554,10 +661,63 @@ function singleGauge(ctx,v,now){const label=state.labels[0]||'Boost Pressure',ba
  if(label==='Boost Pressure'&&val>=state.boostYellow){ctx.fillStyle=val>=state.boostRed?'#ff254b':'#ffd029';ctx.fillRect(x,y,Math.max(2,w*p),h)}
  ctx.font="11px 'GSD Sutro',sans-serif";ctx.fillStyle=fg;ctx.textAlign='left';ctx.fillText(String(min),x,222);ctx.textAlign='right';ctx.fillText(String(max),x+w,222);
 }
-function singleStartup(ctx,elapsed){const t=elapsed/1000;ctx.clearRect(0,0,320,240);ctx.fillStyle='#000';ctx.fillRect(0,0,320,240);ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';const fg=state.gaugeTextColor||'#fff';
- if(t<6.5){ctx.fillStyle=fg;ctx.strokeStyle='#000';ctx.lineWidth=3;ctx.font="bold 29px 'GSD Sutro',sans-serif";const words='GOLDEN SPEED DYNAMICS';const x=320+ctx.measureText(words).width/2-t/6.5*(640+ctx.measureText(words).width);ctx.translate(x,120);ctx.scale(1,.5);ctx.strokeText(words,0,0);ctx.fillText(words,0,0)}
- else {const alpha=t<7.1?(t-6.5)/.6:t<11.1?1:t<11.8?Math.max(0,1-(t-11.1)/.7):0;ctx.globalAlpha=Math.max(0,Math.min(1,alpha));ctx.shadowColor='#700000';ctx.shadowBlur=16;ctx.fillStyle='#fff';ctx.strokeStyle='#000';ctx.lineWidth=4;ctx.font="bold 72px 'GSD Sutro',sans-serif";ctx.strokeText('GSD',160,116);ctx.fillText('GSD',160,116);ctx.shadowBlur=0;ctx.font="14px 'GSD Sutro',sans-serif";ctx.fillText('GOLDEN SPEED DYNAMICS',160,170,290)}ctx.restore()}
-function frame(now){if(engine.auto){const t=(now-t0)/1000;engine.rpm=Math.round(900+(Math.sin(t*.65)+1)*2700);engine.throttle=Math.round(clamp((Math.sin(t*.65-.5)+1)*50,0,100));engine.load=Math.round(12+engine.throttle*.83);}const v=data();const c=document.querySelector('#gauges .gauge:first-child canvas');if(c){if(c.width!==320)c.width=320;if(c.height!==240)c.height=240;const ctx=c.getContext('2d');const elapsed=now-startupAt;if(elapsed>=0&&elapsed<startupDuration)singleStartup(ctx,elapsed);else singleGauge(ctx,v,now)}requestAnimationFrame(frame)}render();requestAnimationFrame(frame);
+function singleStartup(ctx,elapsed){
+ // Same sequence and artwork as the approved three-gauge startup, adapted
+ // from its three 300px circular viewports to one 320x240 rectangular viewport.
+ const t=elapsed/1000;
+ const scrollEnd=6.5,fadeInEnd=7.1,logoHoldEnd=11.1,logoFadeEnd=11.8;
+ const clamp01=x=>Math.max(0,Math.min(1,x));
+ const smooth=x=>{x=clamp01(x);return x*x*(3-2*x)};
+ const ease=(a,b)=>smooth((t-a)/(b-a));
+ ctx.clearRect(0,0,320,240);
+ ctx.fillStyle='#000';ctx.fillRect(0,0,320,240);
+ if(t<scrollEnd){
+  ctx.save();
+  const words='GOLDEN SPEED DYNAMICS';
+  // Triple-gauge 150px lettering, 50% vertical compression, scaled to the
+  // single screen's height; width remains unchanged by compression.
+  ctx.font="400 120px 'GSD Sutro',sans-serif";
+  ctx.textAlign='left';ctx.textBaseline='middle';
+  ctx.translate(0,120);ctx.scale(1,.5);ctx.translate(0,-120);
+  const w=ctx.measureText(words).width;
+  const x=320-(320+w)*(t/scrollEnd);
+  ctx.lineJoin='round';ctx.shadowColor='#700000';ctx.shadowBlur=15;
+  ctx.fillStyle='#fff';ctx.fillText(words,x,120);
+  ctx.shadowBlur=0;ctx.strokeStyle='#000';ctx.lineWidth=2;
+  ctx.strokeText(words,x,120);ctx.fillText(words,x,120);
+  ctx.restore();return;
+ }
+ if(t<logoFadeEnd){
+  const opacity=ease(scrollEnd,fadeInEnd)*(1-ease(logoHoldEnd,logoFadeEnd));
+  ctx.save();ctx.globalAlpha=opacity;
+  if(headerStartupLogo.complete&&headerStartupLogo.naturalWidth){
+   const size=194;ctx.drawImage(headerStartupLogo,160-size/2,120-size/2,size,size);
+  }else{
+   ctx.translate(160,120);ctx.scale(.8,.8);ctx.translate(-150,-150);
+   paintGSD(ctx,150,150,3.1);
+  }
+  ctx.restore();return;
+ }
+ // The triple-gauge demo sweep starts at 11.8s and finishes at 14.8s.
+ const q=clamp01((t-logoFadeEnd)/3);
+ const sweep=q<.5?smooth(q*2):smooth((1-q)*2);
+ const base='#b450ff';
+ ctx.save();ctx.strokeStyle='#30283c';ctx.lineWidth=2;ctx.strokeRect(7,7,306,226);
+ ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';
+ ctx.font="15px 'GSD Sutro',sans-serif";ctx.fillText('BOOST PRESSURE',160,45,295);
+ ctx.shadowColor=base;ctx.shadowBlur=10;
+ ctx.font="bold 79px 'GSD Sutro',sans-serif";ctx.fillText((30*sweep).toFixed(1),160,121,285);
+ ctx.shadowBlur=0;ctx.font="17px 'GSD Sutro',sans-serif";ctx.fillText('PSI',160,174);
+ ctx.fillStyle='#1c1427';ctx.fillRect(27,203,266,9);
+ ctx.fillStyle=base;ctx.shadowColor=base;ctx.shadowBlur=12;
+ ctx.fillRect(27,203,Math.max(2,266*sweep),9);ctx.shadowBlur=0;
+ ctx.font="11px 'GSD Sutro',sans-serif";ctx.textAlign='left';ctx.fillStyle='#fff';ctx.fillText('0',27,222);
+ ctx.textAlign='right';ctx.fillText('30',293,222);
+ const faceOpacity=ease(11.8,12.25);
+ if(faceOpacity<1){ctx.globalAlpha=1-faceOpacity;ctx.fillStyle='#000';ctx.fillRect(0,0,320,240)}
+ ctx.restore();
+}
+function frame(now){if(engine.auto){const t=(now-t0)/1000;engine.rpm=Math.round(900+(Math.sin(t*.65)+1)*2700);engine.throttle=Math.round(clamp((Math.sin(t*.65-.5)+1)*50,0,100));engine.load=Math.round(12+engine.throttle*.83);}const v=data();const c=document.querySelector('#gauges .gauge:first-child canvas');if(c){if(c.width!==320)c.width=320;if(c.height!==240)c.height=240;const ctx=c.getContext('2d');const elapsed=now-startupAt;if(elapsed>=0&&elapsed<startupDuration)singleStartup(ctx,elapsed);else if(state.splitEnabled&&state.splitEnabled[0])singleSplitGauge(ctx,v,now);else singleGauge(ctx,v,now)}requestAnimationFrame(frame)}render();requestAnimationFrame(frame);
 })();
 </script><script id="gsd-dashboard-accent-v1">
 (()=>{
