@@ -514,7 +514,7 @@ function startupGauge(ctx,i,elapsed,v,time){
  const demo={...v,boost:30*sweep,afr:11+7*sweep,iat:200*sweep,egt:1320*sweep};
  const oldColors=state.colors,oldGreen=state.boostGreen,oldYellow=state.boostYellow,oldRed=state.boostRed,oldLow=state.afrLow,oldHigh=state.afrHigh,oldIat=state.iatWarn,oldEgt=state.egtWarn;
  try{
-  state.colors=['#b450ff','#b450ff','#b450ff'];state.boostGreen=30;state.boostYellow=30;state.boostRed=30;state.afrLow=10;state.afrHigh=19;state.iatWarn=250;state.egtWarn=1650;
+  state.colors=[oldColors[0]||'#a65aff',oldColors[1]||oldColors[0]||'#a65aff',oldColors[2]||oldColors[0]||'#a65aff'];state.boostGreen=30;state.boostYellow=30;state.boostRed=30;state.afrLow=10;state.afrHigh=19;state.iatWarn=250;state.egtWarn=1650;
   gauge(ctx,i,demo,time,true);
   const faceOpacity=ease(11.8,12.25);
   if(faceOpacity<1){ctx.save();ctx.globalAlpha=1-faceOpacity;ctx.fillStyle='#000';circle();ctx.fill();ctx.restore();}
@@ -927,6 +927,22 @@ screen.addEventListener('pointerup',e=>{
 },true);
 screen.addEventListener('click',e=>{
  if(performance.now()<suppressClickUntil&&!opened){e.preventDefault();e.stopPropagation()}
+},true);
+// Swipe back to the gauge from touchscreen menus without disturbing controls.
+let menuGesture=null;
+layer.addEventListener('pointerdown',e=>{
+ if(!opened||e.button!==0||e.target.closest('input,select,button,textarea'))return;
+ menuGesture={id:e.pointerId,x:e.clientX,y:e.clientY,page};
+},true);
+layer.addEventListener('pointercancel',()=>{menuGesture=null},true);
+layer.addEventListener('pointerup',e=>{
+ if(!menuGesture||menuGesture.id!==e.pointerId)return;
+ const g=menuGesture;menuGesture=null;
+ const dx=e.clientX-g.x,dy=e.clientY-g.y;
+ if(Math.abs(dx)<38||Math.abs(dx)<Math.abs(dy)*1.3)return;
+ if(['diagnostics','scan','clear'].includes(g.page)?dx<0:dx>0){
+  close();e.preventDefault();e.stopPropagation();
+ }
 },true);
 layer.addEventListener('click',e=>{e.stopPropagation();idleReset();const color=e.target.closest('[data-color]');if(color){const target=dialog.querySelector('[data-set="target"]')?.value||'BACKGROUND';if(target==='SWEEP')GSDTouch.setSweep(color.dataset.color);else if(target==='TEXT')GSDTouch.setText(color.dataset.color);else GSDTouch.setBackground(color.dataset.color);view('palette');return}const b=e.target.closest('[data-go]');if(!b){if(e.target.classList.contains('gsd-touch-shade'))close();return}const go=b.dataset.go;if(go==='close')close();else if(go==='boot'){close();GSDTouch.replayBoot()}else if(go==='reset-do'){GSDTouch.reset();view('home')}else if(go==='restore-gauges'){GSDTouch.setSplit(false);GSDTouch.setPID('Boost Pressure');view('gauges')}else if(go==='copy'){const data=GSDTouch.exportSettings();if(navigator.clipboard?.writeText)navigator.clipboard.writeText(data).then(()=>{b.textContent='COPIED'}).catch(()=>{b.textContent='COPY UNAVAILABLE'});else b.textContent='COPY UNAVAILABLE'}else view(go)});
 layer.addEventListener('input',e=>{const k=e.target.dataset.set;if(!k)return;const v=e.target.value;if(k==='background')GSDTouch.setBackground(v);if(k==='sweep')GSDTouch.setSweep(v);if(k==='text')GSDTouch.setText(v);if(k==='brightness')GSDTouch.setBrightness(v);if(k.startsWith('warn:')){const [,side,i]=k.split(':');GSDTouch.setWarning(side,+i,v)}tint();idleReset()});
