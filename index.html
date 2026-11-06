@@ -66,6 +66,21 @@ body{position:relative;z-index:1;isolation:auto;background:transparent!important
 .display-hex-border input[type=color]{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;opacity:0!important;cursor:pointer!important;z-index:2!important}
 .display-color-option>label{font-size:clamp(9px,2.4vw,12px)!important;letter-spacing:0!important;line-height:1.2!important}
 @media(max-width:400px){.display-hex-border{width:min(100%,98px)!important;height:62px!important}}
+
+/* GSD subtle charcoal carbon-fiber weave across the control panel.
+   CSS-only texture: no external assets, no changes to gauge canvas or startup. */
+.app{
+  background-color:rgba(8,9,11,.65)!important;
+  background-image:
+    repeating-linear-gradient(45deg,rgba(160,166,178,.045) 0px,rgba(160,166,178,.045) 1px,transparent 1px,transparent 5px),
+    repeating-linear-gradient(-45deg,rgba(160,166,178,.035) 0px,rgba(160,166,178,.035) 1px,transparent 1px,transparent 5px)!important;
+}
+.panel{
+  background-color:rgba(10,11,15,.96)!important;
+  background-image:
+    repeating-linear-gradient(45deg,rgba(167,172,184,.045) 0px,rgba(167,172,184,.045) 1px,transparent 1px,transparent 5px),
+    repeating-linear-gradient(-45deg,rgba(167,172,184,.035) 0px,rgba(167,172,184,.035) 1px,transparent 1px,transparent 5px)!important;
+}
 </style><style>.shared-color-field .custom-color-row{margin-top:12px!important;display:flex;align-items:center;justify-content:space-between}.shared-color-field .custom-color-row input[type=color]{width:82px;height:48px;border:1px solid #555963;border-radius:5px;padding:3px;background:#14151a;cursor:pointer}.shared-color-field{border-left:0!important;padding-left:0!important}.shared-color-field label{font-family:inherit!important;font-size:12px!important;font-weight:600!important;letter-spacing:1.3px!important;color:#c5c6ce!important}</style><style id="reference-style">.gauge{position:relative}.gauge .reference-face{display:block;width:100%;aspect-ratio:1;object-fit:fill}.gauge canvas{display:block!important}.gauge .reference-face{display:none!important}.preview-toggle{background:#14151a;border:1px solid #555861;color:#eee;font:700 10px Arial,sans-serif;letter-spacing:1px;padding:9px 12px;cursor:pointer;margin:7px 0 11px}.preview-note{font-size:11px;color:#a7a7b1;line-height:1.5;margin:3px 0 9px}</style><style id="gsd-dashboard-preview-style">.gsd-dashboard-preview{width:100%;margin:12px auto 20px;overflow:hidden;border:1px solid #393341;border-radius:16px;background:#09070d;box-shadow:0 10px 35px #0008}.gsd-dashboard-preview img{display:block;width:100%;height:auto;object-fit:contain}.gsd-dashboard-caption{font-size:11px;letter-spacing:1.5px;color:#a7a1b4;padding:9px 12px;text-align:center;background:#0c0b10}@media(max-width:650px){.gsd-dashboard-preview{border-radius:10px;margin:8px auto 14px}.gsd-dashboard-caption{font-size:9px}}</style><style id="gsd-live-gauges-in-dashboard">
 .gsd-dashboard-stage{position:relative;width:100%;line-height:0;isolation:isolate;overflow:hidden}
 .gsd-dashboard-stage>img{display:block;width:100%;height:auto}
@@ -730,6 +745,15 @@ function frame(now){
  }
  requestAnimationFrame(frame);
 }
+window.GSDTouch={
+ get(){return {label:state.labels[0],background:state.backgrounds[0],style:state.faceStyles[0],split:!!state.splitEnabled[0],sync:localStorage.getItem('gsd-ambient-sync')==='on'}},
+ setPID(v){if(!GAUGE_LIBRARY.some(group=>group[1].some(item=>item[0]===v)))return;state.labels[0]=v;save();render()},
+ setBackground(v){if(!/^#[0-9a-fA-F]{6}$/.test(v))return;state.backgrounds[0]=v;save();render()},
+ setStyle(v){if(!['black','honeycomb','glow','hexglow'].includes(v))return;state.faceStyles[0]=v;save();render()},
+ setSplit(v){state.splitEnabled[0]=!!v;save();render()},
+ setSync(v){localStorage.setItem('gsd-ambient-sync',v?'on':'off')},
+ pids:GAUGE_LIBRARY.flatMap(group=>group[1].map(item=>item[0]))
+};
 render();requestAnimationFrame(frame);
 })();
 </script><script id="gsd-dashboard-accent-v1">
@@ -831,4 +855,41 @@ document.addEventListener('click',e=>{const t=e.target;if(t instanceof HTMLInput
 document.addEventListener('keydown',e=>{if(e.key==='Escape')close();if((e.key==='Enter'||e.key===' ')&&e.target instanceof HTMLInputElement&&e.target.type==='color'){e.preventDefault();open(e.target);}},true);
 })();
 </script>
-<script>(function(){const screen=document.querySelector(".gsd-device-screen"),gauges=document.getElementById("gauges");if(screen&&gauges)screen.appendChild(gauges);})();</script></body></html>
+<script>(function(){const screen=document.querySelector(".gsd-device-screen"),gauges=document.getElementById("gauges");if(screen&&gauges)screen.appendChild(gauges);})();</script><style id="gsd-touch-menu-css">
+.gsd-device-screen{touch-action:manipulation}
+#gsd-touch-layer{position:absolute;inset:0;z-index:40;pointer-events:none;font-family:'GSD Sutro',sans-serif;color:#fff}
+#gsd-touch-layer.open{pointer-events:auto}
+#gsd-touch-layer .gsd-touch-shade{position:absolute;inset:0;background:rgba(0,0,0,.70);opacity:0;transition:opacity .25s}
+#gsd-touch-layer.open .gsd-touch-shade{opacity:1}
+#gsd-touch-layer .gsd-touch-dialog{position:absolute;inset:7% 7%;border:1px solid var(--touch-accent,#a65aff);border-radius:9px;background:linear-gradient(135deg,var(--touch-wash,rgba(166,90,255,.23)),rgba(5,5,8,.94) 55%);box-shadow:0 0 17px var(--touch-wash,rgba(166,90,255,.23)),inset 0 0 14px rgba(0,0,0,.6);transform:scale(.90);opacity:0;transition:opacity .27s,transform .27s;overflow:auto;padding:9px 12px;box-sizing:border-box}
+#gsd-touch-layer.open .gsd-touch-dialog{opacity:1;transform:scale(1)}
+.gsd-touch-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;font-size:clamp(11px,2.6vw,16px);letter-spacing:.06em}
+.gsd-touch-head button{background:transparent;border:1px solid #777;color:white;border-radius:5px;font:inherit;min-width:30px;min-height:25px;cursor:pointer}
+.gsd-touch-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.gsd-touch-actions button,.gsd-touch-row button{background:rgba(0,0,0,.63);border:1px solid var(--touch-accent,#a65aff);box-shadow:0 0 7px var(--touch-wash,rgba(166,90,255,.23));border-radius:5px;color:white;padding:8px 5px;font:inherit;font-size:clamp(9px,1.9vw,12px);cursor:pointer}
+.gsd-touch-row{display:flex;align-items:center;gap:7px;margin:6px 0;font-size:clamp(9px,1.7vw,12px)}
+.gsd-touch-row label{flex:0 0 38%}.gsd-touch-row select,.gsd-touch-row input{min-width:0;flex:1;background:#101014;border:1px solid #666;color:#fff;border-radius:4px;padding:4px;font-size:12px}
+.gsd-touch-muted{color:#c9c9ce;font-size:clamp(9px,1.65vw,11px);line-height:1.4;margin:6px 0}
+.gsd-touch-dtc{border:1px solid #666;padding:6px;border-radius:5px;font-size:11px}
+</style>
+<script id="gsd-touch-menu-v1">(()=>{
+const screen=document.querySelector('.gsd-device-screen');if(!screen||!window.GSDTouch)return;
+const layer=document.createElement('div');layer.id='gsd-touch-layer';layer.setAttribute('aria-label','GSD touchscreen menu');layer.innerHTML='<div class="gsd-touch-shade"></div><div class="gsd-touch-dialog" role="dialog" aria-label="GSD menu"></div>';screen.append(layer);
+const dialog=layer.querySelector('.gsd-touch-dialog');let page='home',open=false,idle=null;
+const safe=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function color(){const v=GSDTouch.get(),hex=v.background||'#a65aff';layer.style.setProperty('--touch-accent',v.style==='black'?'#777777':hex);const n=hex.match(/\w\w/g)?.map(x=>parseInt(x,16))||[166,90,255];layer.style.setProperty('--touch-wash',v.style==='black'?'rgba(120,120,120,.13)':`rgba(${n[0]},${n[1]},${n[2]},.27)`)}
+function close(){open=false;layer.classList.remove('open');clearTimeout(idle)}
+function resetIdle(){clearTimeout(idle);if(open)idle=setTimeout(close,30000)}
+function view(next){page=next;color();let content='';const v=GSDTouch.get();
+if(page==='home')content='<div class="gsd-touch-actions"><button data-go="gauges">GAUGE SETTINGS</button><button data-go="display">DISPLAY SETTINGS</button><button data-go="diagnostics">OBD DIAGNOSTICS</button><button data-go="close">RETURN TO GAUGE</button></div>';
+if(page==='gauges')content=`<div class="gsd-touch-row"><label>GAUGE PID</label><select data-set="pid">${GSDTouch.pids.map(p=>`<option value="${safe(p)}" ${p===v.label?'selected':''}>${safe(p)}</option>`).join('')}</select></div><div class="gsd-touch-row"><label>SPLIT GAUGE</label><select data-set="split"><option value="off" ${!v.split?'selected':''}>OFF</option><option value="on" ${v.split?'selected':''}>ON</option></select></div><div class="gsd-touch-muted">Split PID assignments and warning limits remain adjustable in the web control panel.</div>`;
+if(page==='display')content=`<div class="gsd-touch-row"><label>BACKGROUND</label><input data-set="background" type="color" value="${safe(v.background)}"></div><div class="gsd-touch-row"><label>STYLE</label><select data-set="style"><option value="black" ${v.style==='black'?'selected':''}>PURE BLACK</option><option value="honeycomb" ${v.style==='honeycomb'?'selected':''}>HEX</option><option value="glow" ${v.style==='glow'?'selected':''}>GLOW</option><option value="hexglow" ${v.style==='hexglow'?'selected':''}>HEX GLOW</option></select></div><div class="gsd-touch-row"><label>FACTORY COLOR SYNC</label><select data-set="sync"><option value="off" ${!v.sync?'selected':''}>MANUAL</option><option value="on" ${v.sync?'selected':''}>AUTO (PENDING)</option></select></div><div class="gsd-touch-muted">Ambient-light CAN signal detection has not been verified. Auto mode is a saved preference only; manual color remains active.</div>`;
+if(page==='diagnostics')content='<div class="gsd-touch-dtc">OBD STATUS: NOT CONNECTED<br>NO LIVE VEHICLE DATA AVAILABLE</div><div class="gsd-touch-actions" style="margin-top:8px"><button data-go="scan">SCAN CODES</button><button data-go="clear">CLEAR CODES</button></div><div class="gsd-touch-muted">Preview only. ESP32-to-Veepeak VP-01 communication and OBD-II services must be implemented and tested before these buttons can read or erase codes.</div>';
+if(page==='scan')content='<div class="gsd-touch-dtc">SCAN UNAVAILABLE — NO OBD CONNECTION</div><div class="gsd-touch-muted">No codes have been read. Connect the ESP32 vehicle-data service before scanning.</div>';
+if(page==='clear')content='<div class="gsd-touch-dtc">CLEAR DISABLED — NO OBD CONNECTION</div><div class="gsd-touch-muted">No codes were cleared. A future connected version will require explicit confirmation and ignition-on/engine-off safety checks.</div>';
+dialog.innerHTML=`<div class="gsd-touch-head"><span>${page==='home'?'GSD MAIN MENU':page==='gauges'?'GAUGE SETTINGS':page==='display'?'DISPLAY SETTINGS':page==='diagnostics'?'OBD DIAGNOSTICS':'OBD DIAGNOSTICS'}</span><button data-go="close" aria-label="Close menu">✕</button></div>${content}${page!=='home'?'<div class="gsd-touch-row"><button data-go="'+(page==='scan'||page==='clear'?'diagnostics':'home')+'">◀ BACK</button></div>':''}`;resetIdle()}
+function show(){if(open)return;open=true;view('home');layer.classList.add('open')}
+screen.addEventListener('click',e=>{if(!open){show();e.stopPropagation()}},false);
+layer.addEventListener('click',e=>{e.stopPropagation();resetIdle();const b=e.target.closest('[data-go]');if(b){if(b.dataset.go==='close')close();else view(b.dataset.go)}else if(e.target.classList.contains('gsd-touch-shade'))close()});
+layer.addEventListener('change',e=>{const k=e.target.dataset.set;if(!k)return;const v=e.target.value;if(k==='pid')GSDTouch.setPID(v);if(k==='background')GSDTouch.setBackground(v);if(k==='style')GSDTouch.setStyle(v);if(k==='split')GSDTouch.setSplit(v==='on');if(k==='sync')GSDTouch.setSync(v==='on');view(page)});
+})();</script></body></html>
