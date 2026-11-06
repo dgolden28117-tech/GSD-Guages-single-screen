@@ -726,7 +726,7 @@ function singleStartup(ctx,elapsed){
  const oldColors=state.colors,oldGreen=state.boostGreen,oldYellow=state.boostYellow,oldRed=state.boostRed,oldLow=state.afrLow,oldHigh=state.afrHigh,oldIat=state.iatWarn,oldEgt=state.egtWarn;
  ctx.save();ctx.translate(40,0);ctx.scale(.8,.8);
  try{
-  state.colors=['#b450ff','#b450ff','#b450ff'];state.boostGreen=30;state.boostYellow=30;state.boostRed=30;state.afrLow=10;state.afrHigh=19;state.iatWarn=250;state.egtWarn=1650;
+  state.colors=[oldColors[0]||'#a65aff',oldColors[1]||oldColors[0]||'#a65aff',oldColors[2]||oldColors[0]||'#a65aff'];state.boostGreen=30;state.boostYellow=30;state.boostRed=30;state.afrLow=10;state.afrHigh=19;state.iatWarn=250;state.egtWarn=1650;
   gauge(ctx,0,demo,performance.now(),true);
   const faceOpacity=ease(11.8,12.25);
   if(faceOpacity<1){ctx.globalAlpha=1-faceOpacity;ctx.fillStyle='#000';ctx.beginPath();ctx.arc(150,150,122,0,Math.PI*2);ctx.fill();}
